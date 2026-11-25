@@ -42,10 +42,21 @@ const outPath = join(outDir, "entry.txt");
 // Write the emoji alone: no trailing newline, no other characters.
 writeFileSync(outPath, EMOJI, "utf8");
 
-// Read the file back and confirm it holds the emoji byte for byte.
+// Read the file back and confirm it holds the emoji byte for byte —
+// and that what is on disk still segments to exactly one emoji grapheme,
+// so a stray byte or newline the write step introduced cannot slip through.
 const written = readFileSync(outPath, "utf8");
 if (written !== EMOJI) {
   fail("entry file does not match the emoji byte for byte");
+}
+const writtenClusters = [
+  ...new Intl.Segmenter("en", { granularity: "grapheme" }).segment(written),
+];
+if (
+  writtenClusters.length !== 1 ||
+  !/\p{Extended_Pictographic}/u.test(written)
+) {
+  fail("entry file does not hold exactly one emoji");
 }
 
 console.log(
